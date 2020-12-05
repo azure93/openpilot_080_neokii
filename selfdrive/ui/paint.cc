@@ -468,7 +468,6 @@ static void bb_ui_draw_measures_left(UIState *s, int bb_x, int bb_y, int bb_w ) 
     bb_ry = bb_y + bb_h;
   }
 
-
   //finally draw the frame
   bb_h += 40;
   nvgBeginPath(s->vg);
@@ -492,7 +491,7 @@ static void bb_ui_draw_measures_right(UIState *s, int bb_x, int bb_y, int bb_w )
 
   // add CPU temperature
   if (UI_FEATURE_RIGHT_CPU_TEMP) {
-        char val_str[16];
+    char val_str[16];
     char uom_str[6];
     NVGcolor val_color = nvgRGBA(255, 255, 255, 200);
 
@@ -517,6 +516,29 @@ static void bb_ui_draw_measures_right(UIState *s, int bb_x, int bb_y, int bb_w )
       snprintf(val_str, sizeof(val_str), "%.1f°", cpuTemp);
       snprintf(uom_str, sizeof(uom_str), "");
     bb_h +=bb_ui_draw_measure(s,  val_str, uom_str, "CPU TEMP",
+        bb_rx, bb_ry, bb_uom_dx,
+        val_color, lab_color, uom_color,
+        value_fontSize, label_fontSize, uom_fontSize );
+    bb_ry = bb_y + bb_h;
+  }
+
+  // add CPU Usage
+  if (UI_FEATURE_RIGHT_CPU_LOAD) {
+    char val_str[16];
+    char uom_str[6];
+    NVGcolor val_color = nvgRGBA(255, 255, 255, 200);
+
+    float cpuUsage = scene->thermal.getCpuPerc();
+
+    if(cpuUsage > 80) {
+      val_color = nvgRGBA(255, 188, 3, 200);
+    }
+    if(cpuUsage > 90) {
+      val_color = nvgRGBA(255, 0, 0, 200);
+    }
+    snprintf(val_str, sizeof(val_str), "%d%%", (int)cpuUsage);
+    snprintf(uom_str, sizeof(uom_str), "");
+    bb_h +=bb_ui_draw_measure(s,  val_str, uom_str, "CPU USAGE",
         bb_rx, bb_ry, bb_uom_dx,
         val_color, lab_color, uom_color,
         value_fontSize, label_fontSize, uom_fontSize );
@@ -580,45 +602,6 @@ static void bb_ui_draw_measures_right(UIState *s, int bb_x, int bb_y, int bb_w )
     bb_ry = bb_y + bb_h;
   }
 
-  // add panda GPS accuracy
-  if (UI_FEATURE_RIGHT_GPS_ACCURACY) {
-    char val_str[16];
-    char uom_str[3];
-    NVGcolor val_color = nvgRGBA(255, 255, 255, 200);
-    //show red/orange if gps accuracy is high
-      if(scene->gpsAccuracy > 1.0) {
-         val_color = nvgRGBA(255, 188, 3, 200);
-      }
-      if(scene->gpsAccuracy > 1.5) {
-         val_color = nvgRGBA(255, 80, 80, 200);
-      }
-    // gps accuracy is always in meters
-    snprintf(val_str, sizeof(val_str), "%.2f", (s->scene.gpsAccuracy));
-    snprintf(uom_str, sizeof(uom_str), "m");
-    bb_h +=bb_ui_draw_measure(s,  val_str, uom_str, "GPS PREC",
-        bb_rx, bb_ry, bb_uom_dx,
-        val_color, lab_color, uom_color,
-        value_fontSize, label_fontSize, uom_fontSize );
-    bb_ry = bb_y + bb_h;
-  }
-
-  // add panda GPS satellite
-  if (UI_FEATURE_RIGHT_GPS_SATELLITE) {
-    char val_str[16];
-    char uom_str[3];
-    NVGcolor val_color = nvgRGBA(255, 255, 255, 200);
-
-    if(s->scene.satelliteCount < 6)
-         val_color = nvgRGBA(255, 80, 80, 200);
-
-    snprintf(val_str, sizeof(val_str), "%d", s->scene.satelliteCount > 0 ? s->scene.satelliteCount : 0);
-    snprintf(uom_str, sizeof(uom_str), "");
-    bb_h +=bb_ui_draw_measure(s,  val_str, uom_str, "SATELLITE",
-        bb_rx, bb_ry, bb_uom_dx,
-        val_color, lab_color, uom_color,
-        value_fontSize, label_fontSize, uom_fontSize );
-    bb_ry = bb_y + bb_h;
-  }
 
   //finally draw the frame
   bb_h += 40;
@@ -895,7 +878,7 @@ static void ui_draw_driver_view(UIState *s) {
 static void ui_draw_vision_brake(UIState *s) {
   const UIScene *scene = &s->scene;
   const int brake_size = 96;
-  const int brake_x = (s->scene.viz_rect.x + (brake_size * 4) + (bdr_is * 4));
+  const int brake_x = (s->scene.viz_rect.x + (brake_size * 1.2) + (bdr_is * 1));
   const int brake_y = (s->scene.viz_rect.bottom() - footer_h + ((footer_h - brake_size) / 2));
   const int brake_img_size = (brake_size * 1.5);
   const int brake_img_x = (brake_x - (brake_img_size / 2));
@@ -936,11 +919,8 @@ static void ui_draw_vision_header(UIState *s) {
 }
 
 static void ui_draw_vision_footer(UIState *s) {
-  ui_draw_vision_face(s);
-
-#if UI_FEATURE_BRAKE
+//  ui_draw_vision_face(s);
   ui_draw_vision_brake(s);
-#endif
 }
 
 void ui_draw_vision_alert(UIState *s, cereal::ControlsState::AlertSize va_size, UIStatus va_color,
@@ -1012,6 +992,7 @@ static void ui_draw_vision(UIState *s) {
   } else {
     ui_draw_driver_view(s);
   }
+
 
   if (scene->alert_size != cereal::ControlsState::AlertSize::NONE) {
     ui_draw_vision_alert(s, scene->alert_size, s->status,

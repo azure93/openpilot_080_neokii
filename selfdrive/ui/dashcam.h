@@ -88,6 +88,8 @@ void stop_capture() {
   char videos_dir[50] = "/storage/emulated/0/videos";
 
   if (captureState == CAPTURE_STATE_CAPTURING) {
+    system("find /data/media/0/videos -mtime +7 -delete");
+    system("find /data/media/0/realdata -mtime +7 -delete");
     system("killall -SIGINT screenrecord");
     captureState = CAPTURE_STATE_NOT_CAPTURING;
     elapsed_time = get_time() - start_time;
@@ -192,25 +194,25 @@ void draw_date_time(UIState *s) {
 
   // Draw the current date/time
 
-  int rect_w = 465;
-  int rect_h = 80;
-  int rect_x = (1920-rect_w)/2;
-  int rect_y = (1080-rect_h-10);
+  int rect_w = 385;
+  int rect_h = 70;
+  int rect_x = (1920-rect_w);
+  int rect_y = (1080-rect_h-23);
 
   // Get local time to display
   char now[50];
   struct tm tm = get_time_struct();
   snprintf(now,sizeof(now),"%04d/%02d/%02d  %02d:%02d:%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 
-  nvgBeginPath(s->vg);
-    nvgRoundedRect(s->vg, rect_x, rect_y, rect_w, rect_h, 15);
-    nvgFillColor(s->vg, nvgRGBA(0, 0, 0, 100));
-    nvgFill(s->vg);
-    nvgStrokeColor(s->vg, nvgRGBA(255,255,255,80));
-    nvgStrokeWidth(s->vg, 6);
-    nvgStroke(s->vg);
+//  nvgBeginPath(s->vg);
+//    nvgRoundedRect(s->vg, rect_x, rect_y, rect_w, rect_h, 15);
+//    nvgFillColor(s->vg, nvgRGBA(0, 0, 0, 100));
+//    nvgFill(s->vg);
+//    nvgStrokeColor(s->vg, nvgRGBA(255,255,255,80));
+//    nvgStrokeWidth(s->vg, 6);
+//    nvgStroke(s->vg);
 
-  nvgFontSize(s->vg, 60);
+  nvgFontSize(s->vg, 30);
     nvgFontFace(s->vg, "sans-semibold");
     nvgFillColor(s->vg, nvgRGBA(255, 255, 255, 200));
     nvgText(s->vg,rect_x+231,rect_y+55,now,NULL);
@@ -261,21 +263,21 @@ static void screen_draw_button(UIState *s, int touch_x, int touch_y) {
 //  if (s->vision_connected && s->plus_state == 0) {
   if (s->vision_connected){
 
-    if (captureState == CAPTURE_STATE_CAPTURING) {
-      draw_lock_button(s);
-    }
+//    if (captureState == CAPTURE_STATE_CAPTURING) {
+//      draw_lock_button(s);
+//    }
 
     int btn_w = 150;
     int btn_h = 150;
-    int btn_x = 1920 - btn_w - 110;
-    int btn_y = 1080 - btn_h - 45;
+    int btn_x = 1920 - btn_w - 115;
+    int btn_y = 1080 - btn_h - 100;
     nvgBeginPath(s->vg);
       nvgRoundedRect(s->vg, btn_x, btn_y, btn_w, btn_h, 100);
       nvgStrokeColor(s->vg, nvgRGBA(255,255,255,80));
       nvgStrokeWidth(s->vg, 6);
       nvgStroke(s->vg);
 
-      nvgFontSize(s->vg, 70);
+      nvgFontSize(s->vg, 65);
 
       if (captureState == CAPTURE_STATE_CAPTURING) {
         NVGcolor fillColor = nvgRGBA(255,0,0,150);
@@ -291,7 +293,7 @@ static void screen_draw_button(UIState *s, int touch_x, int touch_y) {
   }
 
   if (captureState == CAPTURE_STATE_CAPTURING) {
-    //draw_date_time(s);
+    draw_date_time(s);
 
     elapsed_time = get_time() - start_time;
 
@@ -341,16 +343,13 @@ bool dashcam( UIState *s, int touch_x, int touch_y ) {
     screen_toggle_lock();
     touched = true;
   }
-  if (!s->vision_connected) {
-    // Assume car is not in drive so stop recording
+
+  if (s->scene.controls_state.getVEgo() > 2.1 && captureState == CAPTURE_STATE_NOT_CAPTURING && s->scene.controls_state.getEnabled()) {
+    start_capture();
+  } else if (s->scene.controls_state.getVEgo() < 1.5 && !s->scene.controls_state.getEnabled()) {
     stop_capture();
   }
-//  if (s->scene.v_ego > 2.1 && captureState == CAPTURE_STATE_NOT_CAPTURING && !s->scene.engaged) {
-//    start_capture();
-//  } else if (s->scene.v_ego < 1.5 && !s->scene.engaged) {
-  if (s->scene.controls_state.getVEgo() < 1.5 && !s->scene.controls_state.getEnabled()) {
-    stop_capture();
-  }
+
   s->scene.recording = (captureState != CAPTURE_STATE_NOT_CAPTURING);
   
   return touched;
